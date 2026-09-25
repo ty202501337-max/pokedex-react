@@ -175,7 +175,7 @@ function DetailView({ pokemon, onClose }) {
                 {pokemon.abilities.map((a) => (
                   <li key={a.ability.name}>
                     {formatName(a.ability.name)}
-                    {a.is_hidden && <span className="hidden-tag"> (Hidden)</span>}
+                    {a.is_hidden && <span className="hidden-tag"></span>}
                   </li>
                 ))}
               </ul>
