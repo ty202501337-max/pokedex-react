@@ -3,6 +3,7 @@ import axios from 'axios'
 import './App.css'
 
 const BATCH_SIZE = 60
+const TOTAL_POKEMON = 1025
 
 const TYPE_COLORS = {
   normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
@@ -199,44 +200,76 @@ function DetailView({ pokemon, onClose }) {
 
 function App() {
   const [pokemonList, setPokemonList] = useState([])
-  const [offset, setOffset] = useState(0)
-  const [loadingGrid, setLoadingGrid] = useState(false)
-  const fetchedOffsets = useRef(new Set())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [loadingGrid, setLoadingGrid] = useState(true)
+  const [gridError, setGridError] = useState('')
+  const pageCache = useRef(new Map())
+  const totalPages = Math.ceil(TOTAL_POKEMON / BATCH_SIZE)
 
   const [searchInput, setSearchInput] = useState('')
   const [searchedPokemon, setSearchedPokemon] = useState(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
 
-  async function fetchBatch(startOffset) {
-    if (fetchedOffsets.current.has(startOffset)) return
-
-    fetchedOffsets.current.add(startOffset)
-    setLoadingGrid(true)
-    const ids = Array.from({ length: BATCH_SIZE }, (_, i) => startOffset + i + 1)
-    try {
-      const results = await Promise.all(
-        ids.map((id) =>
-          axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.data)
-        )
-      )
-      setPokemonList((prev) => [...prev, ...results])
-      setOffset(startOffset + BATCH_SIZE)
-    } catch (err) {
-      fetchedOffsets.current.delete(startOffset)
-      console.error('Failed to load Pokemon batch:', err)
-    } finally {
-      setLoadingGrid(false)
-    }
-  }
-
   useEffect(() => {
-    fetchBatch(0)
-  }, [])
+    let cancelled = false
+    const cachedPage = pageCache.current.get(currentPage)
+    const startId = (currentPage - 1) * BATCH_SIZE + 1
+    const endId = Math.min(currentPage * BATCH_SIZE, TOTAL_POKEMON)
 
-  function handleLoadMore() {
-    fetchBatch(offset)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+
+    if (cachedPage) {
+      Promise.resolve().then(() => {
+        if (cancelled) return
+        setPokemonList(cachedPage)
+        setLoadingGrid(false)
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const ids = Array.from({ length: endId - startId + 1 }, (_, index) => startId + index)
+    Promise.all(
+      ids.map((id) =>
+        axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.data)
+      )
+    )
+      .then((results) => {
+        if (cancelled) return
+        pageCache.current.set(currentPage, results)
+        setPokemonList(results)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.error(`Failed to load Pokemon page ${currentPage}:`, err)
+        setPokemonList([])
+        setGridError(`Could not load page ${currentPage}. Please try again.`)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingGrid(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentPage])
+
+  function handlePageChange(page) {
+    setGridError('')
+    setLoadingGrid(true)
+    setCurrentPage(page)
   }
+
+  const windowStart = Math.min(
+    Math.max(currentPage - 2, 1),
+    Math.max(totalPages - 4, 1)
+  )
+  const pageNumbers = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => windowStart + index
+  )
 
   function handleSearchInputChange(e) {
     const value = e.target.value
@@ -257,7 +290,7 @@ function App() {
     try {
       const res = await axios.get(`https://pokeapi.co/api/v2/pokemon/${query}`)
       setSearchedPokemon(res.data)
-    } catch (err) {
+    } catch {
       setSearchedPokemon(null)
       setSearchError(`No Pokemon found for "${searchInput}"`)
     } finally {
@@ -303,15 +336,44 @@ function App() {
         />
       )}
 
+      {loadingGrid && <p className="status-text">Loading page {currentPage}...</p>}
+      {gridError && <p className="status-text error">{gridError}</p>}
+
       <div className="pokemon-grid">
-        {pokemonList.map((p) => (
-          <PokemonCard key={p.id} pokemon={p} onClick={handleCardClick} />
-        ))}
+        {!loadingGrid &&
+          pokemonList.map((p) => (
+            <PokemonCard key={p.id} pokemon={p} onClick={handleCardClick} />
+          ))}
       </div>
 
-      <div className="load-more-container">
-        <button onClick={handleLoadMore} disabled={loadingGrid}>
-          {loadingGrid ? 'Loading...' : 'Load More'}
+      <div className="pagination-container" aria-label="Pagination">
+        <button
+          type="button"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1 || loadingGrid}
+          aria-label="Previous page"
+        >
+          ←
+        </button>
+        {pageNumbers.map((page) => (
+          <button
+            type="button"
+            key={page}
+            className={page === currentPage ? 'current-page' : ''}
+            onClick={() => handlePageChange(page)}
+            disabled={page === currentPage || loadingGrid}
+            aria-current={page === currentPage ? 'page' : undefined}
+          >
+            {page}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || loadingGrid}
+          aria-label="Next page"
+        >
+          →
         </button>
       </div>
     </div>
