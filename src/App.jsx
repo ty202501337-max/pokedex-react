@@ -298,6 +298,11 @@ function App() {
     }
   }
 
+  function handleDetailClose() {
+    setSearchedPokemon(null)
+    setSearchInput('')
+  }
+
   function handleCardClick(idOrName) {
     setSearchInput(String(idOrName))
     setSearchLoading(true)
@@ -320,7 +325,7 @@ function App() {
       <form className="search-bar" onSubmit={handleSearch}>
         <input
           type="text"
-          placeholder="Search Pokemon Name"
+          placeholder="Search Pokemon Name or ID"
           value={searchInput}
           onChange={handleSearchInputChange}
         />
@@ -332,7 +337,7 @@ function App() {
       {searchedPokemon && !searchLoading && (
         <DetailView
           pokemon={searchedPokemon}
-          onClose={() => setSearchedPokemon(null)}
+          onClose={handleDetailClose}
         />
       )}
 

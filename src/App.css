@@ -23,8 +23,8 @@ body {
   font-family: 'Fredoka', 'Baloo 2', sans-serif;
   font-size: 2.7rem;
   font-weight: 800;
-  color: #e9f409;
-  -webkit-text-stroke: 3px #0c7aff;
+  color: #f40909;
+  -webkit-text-stroke: 3px #1e426e;
 }
 
 /* Search bar */
@@ -261,20 +261,34 @@ body {
 
 .modal-close {
   position: absolute;
-  top: 10px;
-  right: 12px;
-  border: none;
-  background: transparent;
-  color: #666;
-  font-size: 1.25rem;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #a10f0f;
+  border-radius: 50%;
+  background: #ee1515;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
   font-weight: bold;
   line-height: 1;
-  padding: 4px 8px;
+  padding: 0;
   cursor: pointer;
+  box-shadow: 0 2px 0 #a10f0f;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
 }
 
 .modal-close:hover {
-  color: #222;
+  background: #d91010;
+}
+
+.modal-close:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #a10f0f;
 }
 
 .detail-header {
@@ -301,6 +315,7 @@ body {
 .detail-body {
   display: flex;
   min-height: 500px;
+  padding-top: 32px;
 }
 
 .detail-image-box {
@@ -435,7 +450,8 @@ body {
 
 @media (max-width: 700px) {
   .detail-view {
-    max-height: 90vh;
+    width: calc(100% - 32px);
+    max-height: calc(100vh - 48px);
     overflow-y: auto;
     padding: 18px;
   }
@@ -456,7 +472,12 @@ body {
   .detail-info {
     width: 100%;
     padding: 0;
-    overflow-y: visible;
+    overflow: visible;
+  }
+
+  .modal-close {
+    top: 12px;
+    right: 12px;
   }
 }
 
